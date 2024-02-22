@@ -10,6 +10,7 @@ using Bloggie.Web.Models.Domain;
 using Bloggie.Web.Models.ViewModels;
 using NuGet.Protocol.Plugins;
 using Azure;
+using Bloggie.Web.Repositories;
 
 namespace Bloggie.Web.Controllers
 {
@@ -17,27 +18,28 @@ namespace Bloggie.Web.Controllers
     {
         private readonly BloggieDbContext _context;
 
-        public AdminTagController(BloggieDbContext context)
+        private readonly ITagRepository tagRepository;
+
+        public AdminTagController(BloggieDbContext context, ITagRepository tagRepository)
         {
             _context = context;
+            this.tagRepository = tagRepository;
         }
 
+
         // GET: AdminTag
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
-              return _context.Tags != null ? View(await _context.Tags.ToListAsync()) : Problem("Entity set 'BloggieDbContext.Tags'  is null.");
+            return _context.Tags != null ? View(await tagRepository.GetAllAsync()) : Problem("Entity set 'BloggieDbContext.Tags'  is null.");
         }
 
         // GET: AdminTag/Details/5
+        [HttpGet]
         public async Task<IActionResult> Details(Guid id)
         {
-            if (_context.Tags == null)
-            {
-                return NotFound();
-            }
+            var tag = await tagRepository.GetSingleTagAsync(id);
 
-            var tag = await _context.Tags
-                .FirstOrDefaultAsync(m => m.Id == id);
             if (tag == null)
             {
                 return NotFound();
@@ -48,6 +50,7 @@ namespace Bloggie.Web.Controllers
 
 
         // GET: AdminTag/Create
+        [HttpGet]
         public IActionResult Create()
         {
             return View();
@@ -65,14 +68,19 @@ namespace Bloggie.Web.Controllers
             };
             //if (ModelState.IsValid)
             //{
-            _context.Add(tag);
-                await _context.SaveChangesAsync();
+                //_context.Add(tag);
+                //await _context.SaveChangesAsync();
+                
+                await tagRepository.AddTagAsync(tag);  //tagRepository is the object of Interface ITagRepository, which contains all the methods declaration for performing CRUD Operations on Data.
+                                                        //ITagRepository declared method are defined under TagRepository Class. And those method are only Called here.
+                                                        //This is the example of using Repository Patterns.
                 return RedirectToAction("Index");
+
             //}
             //return View(tag);
         }
 
-
+        [HttpGet]
         public async Task<IActionResult> Edit(Guid id)
         {
             if (_context.Tags == null)
@@ -90,7 +98,7 @@ namespace Bloggie.Web.Controllers
                     Name = tag.Name,
                     DisplayName = tag.DisplayName
                 };
-            return View(tagRequest);
+                return View(tagRequest);
             }
             return View(null);
         }
@@ -138,6 +146,7 @@ namespace Bloggie.Web.Controllers
 
 
         // GET: AdminTag/Delete/5
+        [HttpGet]
         public async Task<IActionResult> Delete(Guid id)
         {
             if (_context.Tags == null)
@@ -145,8 +154,7 @@ namespace Bloggie.Web.Controllers
                 return NotFound();
             }
 
-            var tag = await _context.Tags
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var tag = await _context.Tags.FirstOrDefaultAsync(m => m.Id == id);
             if (tag == null)
             {
                 return NotFound();
